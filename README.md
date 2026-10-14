@@ -8,7 +8,7 @@ An interactive WPF (Windows Presentation Foundation) desktop application designe
 
 * **Interactive WPF GUI:** Clean, dark-themed user interface built with custom styling for easy readability and engagement.
 * **Voice Audio Greeting:** Automatically plays a recorded audio message upon launch welcoming the user using `System.Windows.Media.MediaPlayer`.
-* **Keyword & Topic Recognition:** Responds accurately to inquiries regarding **passwords**, **phishing**, **privacy**, and general cyber safety tips.
+* **Keyword & Topic Recognition:** Responds accurately to inquiries regarding **passwords**, **phishing**, **privacy** and general cyber safety tips.
 * **Dynamic & Random Responses:** Uses collections of varied responses to keep conversations engaging and natural.
 * **User Memory & Context Tracking:**
   * Remembers user names (`"My name is..."`).
