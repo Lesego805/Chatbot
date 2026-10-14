@@ -1,6 +1,6 @@
 # Cybersecurity Awareness Assistant Chatbot (Part 2)
 
-An interactive WPF (Windows Presentation Foundation) desktop application designed to educate users on essential cybersecurity concepts, best practices, and online safety.
+An interactive WPF (Windows Presentation Foundation) desktop application designed to educate users on essential cybersecurity concepts, best practices and online safety.
 
 ---
 
