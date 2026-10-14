@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Commit 3: MediaPlayer initialization and voice greeting playback handler
+using System;
 using System.IO;
 using System.Windows.Media;
 
