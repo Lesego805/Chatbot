@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Chatbot;
+using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 
@@ -6,67 +8,74 @@ namespace CybersecurityChatbot
 {
     public partial class MainWindow : Window
     {
-        private readonly ChatEngine _engine;
-        private readonly MessageProcessorDelegate _messageProcessor;
+        private ChatEngine chatEngine;
+        private TaskManager taskManager;
 
         public MainWindow()
         {
             InitializeComponent();
-            _engine = new ChatEngine();
 
-            // Hook up the delegate required by assessment specifications
-            _messageProcessor = new MessageProcessorDelegate(_engine.ProcessMessage);
+            // --- AUDIO INITIALIZATION & DEBUGGING ---
+            try
+            {
+                string audioPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "greeting.wav");
+                if (File.Exists(audioPath))
+                {
+                    System.Media.SoundPlayer player = new System.Media.SoundPlayer(audioPath);
+                    player.Play();
+                }
+                else
+                {
+                    MessageBox.Show($"Audio file not found at: {audioPath}\n\nMake sure 'greeting.wav' in the Assets folder is set to 'Content' and 'Copy always'.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Audio error: {ex.Message}");
+            }
+            // ----------------------------------------
+
+            chatEngine = new ChatEngine();
+            taskManager = new TaskManager();
+
+            AppendChat("Chatbot: Hello! Welcome to the Cybersecurity Awareness Assistant. What is your name? Or ask me about 'password safety', 'phishing', 'privacy', or type 'quiz'!");
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Play WAV audio greeting safely on application start
-            try
-            {
-                AudioPlayer.PlayGreeting();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Audio playback error: {ex.Message}");
-            }
-
-            // Display welcome message in the chat log
-            AppendMessage("Chatbot", "Hello! Welcome to the Cybersecurity Awareness Assistant. " +
-                                     "What is your name? Or ask me about 'password safety', 'phishing', or 'privacy'!");
+            // Optional startup logic if needed
         }
 
         private void BtnSend_Click(object sender, RoutedEventArgs e)
         {
-            SendMessage();
+            ProcessUserInput();
         }
 
         private void TxtUserInput_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                SendMessage();
+                ProcessUserInput();
             }
         }
 
-        private void SendMessage()
+        private void ProcessUserInput()
         {
             string userInput = TxtUserInput.Text.Trim();
-            if (string.IsNullOrEmpty(userInput)) return;
 
-            // Display user message in chat log
-            AppendMessage("You", userInput);
+            if (string.IsNullOrEmpty(userInput))
+                return;
+
+            AppendChat($"[You]: {userInput}");
             TxtUserInput.Clear();
 
-            // Process response via delegate
-            string response = _messageProcessor.Invoke(userInput);
-
-            // Display chatbot response
-            AppendMessage("Chatbot", response);
+            string botResponse = chatEngine.ProcessMessage(userInput);
+            AppendChat($"[Chatbot]: {botResponse}");
         }
 
-        private void AppendMessage(string sender, string message)
+        private void AppendChat(string message)
         {
-            TxtChatLog.Text += $"[{sender}]: {message}\n\n";
+            TxtChatLog.Text += message + "\n\n";
             ChatScrollViewer.ScrollToEnd();
         }
     }

@@ -9,15 +9,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Update="UserMemory.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
+    <None Remove="Assets\greeting.wav" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Assets\greeting.wav">
+    <Content Include="Assets\greeting.wav">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="26.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="UserMemory.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </Compile>
   </ItemGroup>
 
 </Project>

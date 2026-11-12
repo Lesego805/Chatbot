@@ -1,124 +1,195 @@
-﻿using System;
+﻿using Chatbot;
+using System;
 using System.Collections.Generic;
 
 namespace CybersecurityChatbot
 {
-    // C# Delegate declaration for processing messages
-    public delegate string MessageProcessorDelegate(string userInput);
+    public static class ActivityLogger
+    {
+        private static List<string> logs = new List<string>();
+
+        public static void LogAction(string action)
+        {
+            logs.Add($"{DateTime.Now:HH:mm} - {action}");
+        }
+
+        public static List<string> GetRecentLogs()
+        {
+            return logs;
+        }
+    }
 
     public class ChatEngine
     {
-        public UserMemory Memory { get; private set; } = new UserMemory();
-        private readonly Random _random = new Random();
+        private TaskManager taskManager = new TaskManager();
 
-        // Collections storing dynamic responses
-        private readonly List<string> _phishingTips = new List<string>
-        {
-            "Be cautious of emails asking for urgent personal information. Scammers often disguise themselves as trusted organisations.",
-            "Always inspect the sender's full email address to spot subtle typos or strange domain extensions.",
-            "Avoid clicking on unknown links or downloading unexpected attachments from unfamiliar senders."
-        };
-
-        private readonly List<string> _passwordTips = new List<string>
-        {
-            "Make sure to use strong, unique passwords for each account. Avoid using personal details in your passwords.",
-            "Consider using a passphrase made of 4+ random words for superior security and memorable complexity.",
-            "Enable Two-Factor Authentication (2FA) wherever possible to add an extra layer of defense."
-        };
-
-        private readonly List<string> _privacyTips = new List<string>
-        {
-            "Review your social media privacy settings regularly to limit who can see your personal updates.",
-            "Avoid sharing sensitive information like your home address or phone number publicly online.",
-            "Use encrypted messaging tools and turn off location sharing for non-essential applications."
-        };
+        private bool isQuizActive = false;
+        private int currentQuizQuestion = 0;
+        private int quizScore = 0;
 
         public string ProcessMessage(string input)
         {
-            if (string.IsNullOrWhiteSpace(input))
-                return "I'm not sure I understand. Can you try rephrasing?";
-
             string lowerInput = input.ToLower();
 
-            // 1. Memory Capture (Detect Name)
-            if (lowerInput.StartsWith("my name is "))
+            if (isQuizActive && (lowerInput == "exit" || lowerInput == "quit"))
             {
-                string name = input.Substring(11).Trim();
-                Memory.UserName = name;
-                return $"It's great to meet you, {Memory.UserName}! How can I assist you with cybersecurity today?";
+                isQuizActive = false;
+                ActivityLogger.LogAction("Exited Cybersecurity Quiz.");
+                return "Quiz exited. Type 'quiz' anytime you want to restart!";
             }
 
-            // 2. Sentiment Detection
-            string sentimentPrefix = string.Empty;
-            if (lowerInput.Contains("worried") || lowerInput.Contains("scared") || lowerInput.Contains("anxious"))
+            if (isQuizActive)
             {
-                sentimentPrefix = "It's completely understandable to feel that way. Online security can be intimidating, but I'm here to help you stay safe. ";
-            }
-            else if (lowerInput.Contains("curious") || lowerInput.Contains("interested"))
-            {
-                sentimentPrefix = "That's fantastic! Staying curious is one of the best ways to protect yourself online. ";
-            }
-            else if (lowerInput.Contains("frustrated") || lowerInput.Contains("confused"))
-            {
-                sentimentPrefix = "Don't worry! Cybersecurity concepts can be tricky at first, but we can break it down together. ";
+                return HandleQuizInput(lowerInput);
             }
 
-            // 3. Natural Conversation Flow (Follow-ups)
-            if (lowerInput.Contains("another tip") || lowerInput.Contains("explain more") || lowerInput.Contains("tell me more"))
+            // --- TASK ASSISTANT COMMANDS ---
+            if (lowerInput.Contains("show tasks") || lowerInput.Contains("view tasks") || lowerInput.Contains("list tasks"))
             {
-                if (!string.IsNullOrEmpty(Memory.LastTopicDiscussed))
+                var tasks = taskManager.GetAllTasks();
+                ActivityLogger.LogAction("Viewed task list.");
+                if (tasks.Count == 0)
+                    return "You have no tasks stored in the database.";
+
+                string taskListResponse = "Here are your current tasks:\n";
+                foreach (var t in tasks)
                 {
-                    return GetTopicResponse(Memory.LastTopicDiscussed, sentimentPrefix);
+                    string status = t.IsCompleted ? "[Completed]" : "[Pending]";
+                    string reminder = string.IsNullOrEmpty(t.ReminderDate) ? "No reminder" : $"Reminder: {t.ReminderDate}";
+                    taskListResponse += $"{t.Id}. {t.Title}: {t.Description} - {status} ({reminder})\n";
                 }
+                return taskListResponse.TrimEnd();
             }
 
-            // 4. Keyword Recognition
+            if (lowerInput.StartsWith("add task") || lowerInput.StartsWith("remind me"))
+            {
+                string details = input.Substring(input.IndexOf(' ') + 1).Trim();
+                string[] parts = details.Split('|');
+
+                string title = parts.Length > 0 ? parts[0].Trim() : "General Task";
+                string description = parts.Length > 1 ? parts[1].Trim() : "";
+                string reminderDate = parts.Length > 2 ? parts[2].Trim() : "";
+
+                taskManager.AddTask(title, description, reminderDate);
+                ActivityLogger.LogAction($"Task added: '{title}'");
+
+                return string.IsNullOrEmpty(reminderDate)
+                    ? $"Task added: '{title}'. (Tip: You can add a description and reminder using '| Description | Date')"
+                    : $"Task added: '{title}' with a reminder set for {reminderDate}.";
+            }
+
+            if (lowerInput.StartsWith("complete task"))
+            {
+                string idStr = lowerInput.Replace("complete task", "").Trim();
+                if (int.TryParse(idStr, out int taskId))
+                {
+                    taskManager.CompleteTask(taskId);
+                    ActivityLogger.LogAction($"Marked task ID {taskId} as completed.");
+                    return $"Task {taskId} has been marked as completed!";
+                }
+                return "Please specify a valid task ID to complete (e.g., 'complete task 1').";
+            }
+
+            if (lowerInput.StartsWith("delete task"))
+            {
+                string idStr = lowerInput.Replace("delete task", "").Trim();
+                if (int.TryParse(idStr, out int taskId))
+                {
+                    taskManager.DeleteTask(taskId);
+                    ActivityLogger.LogAction($"Deleted task ID {taskId}.");
+                    return $"Task {taskId} has been deleted from the database.";
+                }
+                return "Please specify a valid task ID to delete (e.g., 'delete task 1').";
+            }
+
+            // --- QUIZ & TIPS COMMANDS ---
+            if (lowerInput.Contains("quiz") || lowerInput.Contains("start quiz"))
+            {
+                isQuizActive = true;
+                currentQuizQuestion = 1;
+                quizScore = 0;
+                ActivityLogger.LogAction("Started Cybersecurity Quiz.");
+                return "Starting Cybersecurity Quiz! (Type 'exit' to quit anytime).\n\nQuestion 1: What does 'phishing' typically refer to?\nA) Catching fish in a network\nB) Deceptive emails trying to steal sensitive information\nC) Upgrading firewall security\n(Reply with A, B, or C)";
+            }
+
+            if (lowerInput.Contains("activity log") || lowerInput.Contains("show log"))
+            {
+                ActivityLogger.LogAction("Viewed activity log.");
+                var logs = ActivityLogger.GetRecentLogs();
+                if (logs.Count == 0)
+                    return "No activity recorded yet.";
+                return "Recent Activity Log:\n" + string.Join("\n", logs);
+            }
+
             if (lowerInput.Contains("password"))
             {
-                Memory.LastTopicDiscussed = "password";
-                Memory.FavoriteTopic = "Password Security";
-                return sentimentPrefix + GetRandomTip(_passwordTips);
+                ActivityLogger.LogAction("Queried password safety.");
+                return "Password Safety Tip: Use strong passwords with a mix of letters, numbers, and symbols, and avoid reusing passwords across multiple accounts.";
             }
-            if (lowerInput.Contains("phishing") || lowerInput.Contains("scam"))
+            else if (lowerInput.Contains("phishing"))
             {
-                Memory.LastTopicDiscussed = "phishing";
-                Memory.FavoriteTopic = "Phishing Prevention";
-                return sentimentPrefix + GetRandomTip(_phishingTips);
+                ActivityLogger.LogAction("Queried phishing info.");
+                return "Phishing Tip: Always verify sender addresses and never click unexpected links or attachments from unknown sources.";
             }
-            if (lowerInput.Contains("privacy"))
+            else if (lowerInput.Contains("privacy"))
             {
-                Memory.LastTopicDiscussed = "privacy";
-                Memory.FavoriteTopic = "Online Privacy";
-                return sentimentPrefix + GetRandomTip(_privacyTips);
+                ActivityLogger.LogAction("Queried privacy info.");
+                return "Privacy Tip: Regularly review your social media and application permission settings to limit data exposure.";
             }
 
-            // 5. Memory Recall
-            if (lowerInput.Contains("what is my name") || lowerInput.Contains("who am i"))
-            {
-                return string.IsNullOrEmpty(Memory.UserName)
-                    ? "You haven't told me your name yet! You can say 'My name is [Name]'."
-                    : $"Your name is {Memory.UserName}!";
-            }
-
-            // 6. Error Handling / Fallback
-            return "I'm not sure I understand. Can you try rephrasing? You can ask me about password safety, phishing scams, or online privacy.";
+            ActivityLogger.LogAction($"Handled general query: {input}");
+            return "I'm your Cybersecurity Awareness Assistant. You can ask me about 'password safety', 'phishing', 'privacy', type 'quiz' to test your knowledge, or manage tasks ('show tasks', 'add task').";
         }
 
-        private string GetRandomTip(List<string> tips)
+        private string HandleQuizInput(string input)
         {
-            int index = _random.Next(tips.Count);
-            return tips[index];
+            bool isCorrect = false;
+
+            switch (currentQuizQuestion)
+            {
+                case 1: if (input == "b") isCorrect = true; break;
+                case 2: if (input == "b") isCorrect = true; break;
+                case 3: if (input == "c") isCorrect = true; break;
+                case 4: if (input == "b") isCorrect = true; break;
+                case 5: if (input == "a") isCorrect = true; break;
+                case 6: if (input == "c") isCorrect = true; break;
+                case 7: if (input == "b") isCorrect = true; break;
+                case 8: if (input == "a") isCorrect = true; break;
+                case 9: if (input == "c") isCorrect = true; break;
+                case 10: if (input == "b") isCorrect = true; break;
+            }
+
+            if (isCorrect) quizScore++;
+            currentQuizQuestion++;
+
+            if (currentQuizQuestion > 10)
+            {
+                isQuizActive = false;
+                ActivityLogger.LogAction($"Completed quiz with score {quizScore}/10.");
+                int finalScore = quizScore;
+                quizScore = 0;
+                currentQuizQuestion = 0;
+                return $"Quiz finished! You scored {finalScore} out of 10. Great job improving your cybersecurity awareness!";
+            }
+
+            return GetQuestionText(currentQuizQuestion);
         }
 
-        private string GetTopicResponse(string topic, string prefix)
+        private string GetQuestionText(int questionNumber)
         {
-            return topic switch
+            switch (questionNumber)
             {
-                "password" => prefix + GetRandomTip(_passwordTips),
-                "phishing" => prefix + GetRandomTip(_phishingTips),
-                "privacy" => prefix + GetRandomTip(_privacyTips),
-                _ => "Feel free to ask a question about phishing, passwords, or privacy!"
-            };
+                case 2: return "Question 2: What does MFA stand for?\nA) Multiple File Access\nB) Multi-Factor Authentication\nC) Main Firewall Architecture\n(Reply A, B, or C)";
+                case 3: return "Question 3: Which of these is an example of a strong password?\nA) password123\nB) John2026\nC) K#9mP!2xL$8\n(Reply A, B, or C)";
+                case 4: return "Question 4: What is ransomware?\nA) Free antivirus software\nB) Malware that encrypts files until a ransom is paid\nC) A secure cloud storage tool\n(Reply A, B, or C)";
+                case 5: return "Question 5: Why should you avoid public Wi-Fi for sensitive logins without a VPN?\nA) Data can be intercepted by hackers on the same network\nB) It uses up too much mobile data\nC) It slows down your browser\n(Reply A, B, or C)";
+                case 6: return "Question 6: What is a social engineering attack?\nA) A bug in social media software\nB) A network hardware failure\nC) Manipulating individuals into handing over confidential information\n(Reply A, B, or C)";
+                case 7: return "Question 7: What does HTTPS ensure on a website?\nA) The website loads faster\nB) Traffic between your browser and the site is encrypted\nC) The website is completely immune to hackers\n(Reply A, B, or C)";
+                case 8: return "Question 8: How often should you update your software and operating system?\nA) As soon as security updates and patches are available\nB) Once every five years\nC) Only when the computer stops working\n(Reply A, B, or C)";
+                case 9: return "Question 9: What is a zero-day vulnerability?\nA) A bug that takes zero days to fix\nB) A virus that deletes data at midnight\nC) An unknown software flaw exploited by attackers before a fix is released\n(Reply A, B, or C)";
+                case 10: return "Question 10: What is the safest way to dispose of old documents containing personal info?\nA) Throw them straight into the public trash bin\nB) Shred them securely before disposal\nC) Burn them in your backyard\n(Reply A, B, or C)";
+                default: return "";
+            }
         }
     }
 }
