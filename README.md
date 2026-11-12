@@ -1,44 +1,41 @@
-# Cybersecurity Awareness Assistant Chatbot (Part 2)
+# Cybersecurity Awareness Chatbot (WPF Desktop Application)
 
-An interactive WPF (Windows Presentation Foundation) desktop application designed to educate users on essential cybersecurity concepts, best practices and online safety.
+**Student Name:** Lesego  
+**Student Number:** ST10499067  
+**Repository:** `ST10499067_Chatbot_Part3`  
 
----
-
-## 🚀 Features
-
-* **Interactive WPF GUI:** Clean, dark-themed user interface built with custom styling for easy readability and engagement.
-* **Voice Audio Greeting:** Automatically plays a recorded audio message upon launch welcoming the user using `System.Windows.Media.MediaPlayer`.
-* **Keyword & Topic Recognition:** Responds accurately to inquiries regarding **passwords**, **phishing**, **privacy** and general cyber safety tips.
-* **Dynamic & Random Responses:** Uses collections of varied responses to keep conversations engaging and natural.
-* **User Memory & Context Tracking:**
-  * Remembers user names (`"My name is..."`).
-  * Remembers favorite topics (`"My favorite topic is..."`).
-  * Tracks conversation history and recalls past topics upon request.
-* **Sentiment & Concern Detection:** Recognizes user anxiety or concern regarding scams/threats and responds with empathetic, reassuring advice.
-* **Guided Follow-Up System:** Prompts users with logical follow-up questions to deepen educational interaction.
+## Overview
+The **Cybersecurity Awareness Chatbot** is a C# .NET 8.0 Windows Presentation Foundation (WPF) desktop application designed to educate users on essential online safety practices. It combines natural keyword recognition, sentiment detection, and conversational memory with interactive productivity tools—including a cybersecurity Task Assistant with reminders, an interactive mini-game quiz, and a real-time Activity Log.
 
 ---
 
-## 🛠️ Project Structure
-
-* **`MainWindow.xaml` / `MainWindow.xaml.cs`**: XAML layout and UI event handlers.
-* **`ChatEngine.cs`**: Core conversation logic, keyword detection, sentiment analysis, and random response selections.
-* **`UserMemory.cs`**: Data model responsible for storing and retrieving user-specific memory fields.
-* **`AudioPlayer.cs`**: Manages media playback for startup voice greetings and sound effects.
-* **`Assets/`**: Contains embedded media assets such as `greeting.wav`.
-
----
-
-## 📋 Pre-Requisites & Requirements
-
-* **Framework:** .NET 6.0 / .NET 8.0 SDK or higher
-* **IDE:** Visual Studio 2022 / 2026 with WPF workload installed
-* **OS:** Windows 10 / 11
+## Core Features
+* **Audio Welcome Greeting:** Plays an automated voice greeting upon application startup via `AudioPlayer.cs`.
+* **Interactive Cybersecurity Q&A (`ChatEngine.cs`):** Recognizes cybersecurity keywords (phishing, malware, password safety, safe browsing, two-factor authentication) and provides actionable tips[cite: 1, 3].
+* **Sentiment Detection & Memory Recall:** Adapts responses based on the user's emotional tone (e.g., *worried*, *curious*, *frustrated*) and remembers the user's name and favorite cybersecurity topic across the conversation.
+* **Task Assistant & Reminders:** Allows users to create, view, complete, and delete cybersecurity tasks with optional reminder dates.
+* **Cybersecurity Mini-Game Quiz:** A multi-question interactive quiz featuring multiple-choice and true/false questions with instant explanations and score tracking.
+* **Activity Log:** Automatically records and displays a chronological history of user actions (tasks added, reminders set, quiz attempts).
 
 ---
 
-## 🔧 Installation & Setup
+## Project Architecture
+The solution follows a modular separation of concerns between the user interface and core business logic:
+* `MainWindow.xaml` / `MainWindow.xaml.cs` – Defines the WPF graphical user interface, layout styling, and UI event handlers.
+* `ChatEngine.cs` – Handles natural language keyword parsing, sentiment detection, conversational memory, and dynamic response generation[cite: 1, 3].
+* `AudioPlayer.cs` – Manages playback of the startup WAV welcome audio greeting[cite: 3, 5].
+* *Task & Quiz Models/Managers* – Encapsulates task item properties, reminder tracking, quiz questions, and activity logging.
 
-1. **Clone the Repository:**
+---
+
+## Prerequisites & Setup Steps
+
+### 1. System Requirements
+* **Operating System:** Windows 10 or Windows 11
+* **IDE:** Visual Studio 2022 (or newer) with the **.NET Desktop Development** workload installed
+* **Framework:** .NET 8.0 SDK (`net8.0-windows`)[cite: 3, 5]
+
+### 2. Cloning and Running the Project
+1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/Lesego805/Chatbot.git](https://github.com/Lesego805/Chatbot.git)
+   git clone [https://github.com/Lesego805/ST10499067_Chatbot_Part3.git](https://github.com/Lesego805/ST10499067_Chatbot_Part3.git)
