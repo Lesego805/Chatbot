@@ -23,13 +23,18 @@ namespace CybersecurityChatbot
     {
         private TaskManager taskManager = new TaskManager();
 
+        private string userName = "";
+        private string lastTopic = "";
         private bool isQuizActive = false;
         private int currentQuizQuestion = 0;
         private int quizScore = 0;
 
         public string ProcessMessage(string input)
         {
-            string lowerInput = input.ToLower();
+            if (string.IsNullOrWhiteSpace(input))
+                return "Please type a message or question so I can assist you.";
+
+            string lowerInput = input.ToLower().Trim();
 
             if (isQuizActive && (lowerInput == "exit" || lowerInput == "quit"))
             {
@@ -41,6 +46,14 @@ namespace CybersecurityChatbot
             if (isQuizActive)
             {
                 return HandleQuizInput(lowerInput);
+            }
+
+            // --- NAME CAPTURE & MEMORY ---
+            if (lowerInput.StartsWith("my name is "))
+            {
+                userName = input.Substring(11).Trim();
+                ActivityLogger.LogAction($"Set user name to {userName}.");
+                return $"Nice to meet you, {userName}! How can I help you stay safe online today? You can ask about 'password safety', 'phishing', 'privacy', manage tasks, or type 'quiz'.";
             }
 
             // --- TASK ASSISTANT COMMANDS ---
@@ -56,7 +69,7 @@ namespace CybersecurityChatbot
                 {
                     string status = t.IsCompleted ? "[Completed]" : "[Pending]";
                     string reminder = string.IsNullOrEmpty(t.ReminderDate) ? "No reminder" : $"Reminder: {t.ReminderDate}";
-                    taskListResponse += $"{t.Id}. {t.Title}: {t.Description} - {status} ({reminder})\n";
+                    taskListResponse += $"{t.Id}. {t.Title}: {t.Description} {status} ({reminder})\n";
                 }
                 return taskListResponse.TrimEnd();
             }
@@ -64,6 +77,9 @@ namespace CybersecurityChatbot
             if (lowerInput.StartsWith("add task") || lowerInput.StartsWith("remind me"))
             {
                 string details = input.Substring(input.IndexOf(' ') + 1).Trim();
+                if (details.ToLower().StartsWith("task "))
+                    details = details.Substring(5).Trim();
+
                 string[] parts = details.Split('|');
 
                 string title = parts.Length > 0 ? parts[0].Trim() : "General Task";
@@ -102,7 +118,7 @@ namespace CybersecurityChatbot
                 return "Please specify a valid task ID to delete (e.g., 'delete task 1').";
             }
 
-            // --- QUIZ & TIPS COMMANDS ---
+            // --- QUIZ & ACTIVITY LOG ---
             if (lowerInput.Contains("quiz") || lowerInput.Contains("start quiz"))
             {
                 isQuizActive = true;
@@ -121,24 +137,44 @@ namespace CybersecurityChatbot
                 return "Recent Activity Log:\n" + string.Join("\n", logs);
             }
 
+            // --- SENTIMENT DETECTION ---
+            string nameGreeting = string.IsNullOrEmpty(userName) ? "" : $", {userName}";
+            if (lowerInput.Contains("worried") || lowerInput.Contains("scared") || lowerInput.Contains("anxious"))
+            {
+                ActivityLogger.LogAction("Detected worried sentiment.");
+                string topicNote = string.IsNullOrEmpty(lastTopic)
+                    ? "Using strong passwords, enabling MFA, and verifying unexpected links will keep you well protected."
+                    : $"Since we were just discussing {lastTopic}, staying alert and following best practices will keep you safe.";
+                return $"It's completely understandable to feel worried{nameGreeting}. Online threats can seem overwhelming, but simple habits make a big difference. {topicNote}";
+            }
+            else if (lowerInput.Contains("curious") || lowerInput.Contains("interested"))
+            {
+                ActivityLogger.LogAction("Detected curious sentiment.");
+                return $"I love your curiosity{nameGreeting}! Staying informed is the best defense against cyber threats. Ask me about 'password safety', 'phishing', or 'privacy' to dive deeper.";
+            }
+
+            // --- CYBERSECURITY TIPS ---
             if (lowerInput.Contains("password"))
             {
+                lastTopic = "password safety";
                 ActivityLogger.LogAction("Queried password safety.");
-                return "Password Safety Tip: Use strong passwords with a mix of letters, numbers, and symbols, and avoid reusing passwords across multiple accounts.";
+                return $"Password Safety Tip{nameGreeting}: Use strong passwords with a mix of letters, numbers, and symbols, and avoid reusing passwords across multiple accounts.";
             }
-            else if (lowerInput.Contains("phishing"))
+            else if (lowerInput.Contains("phishing") || lowerInput.Contains("scam"))
             {
+                lastTopic = "phishing";
                 ActivityLogger.LogAction("Queried phishing info.");
-                return "Phishing Tip: Always verify sender addresses and never click unexpected links or attachments from unknown sources.";
+                return $"Phishing Tip{nameGreeting}: Always verify sender addresses and never click unexpected links or attachments from unknown sources.";
             }
             else if (lowerInput.Contains("privacy"))
             {
+                lastTopic = "privacy";
                 ActivityLogger.LogAction("Queried privacy info.");
-                return "Privacy Tip: Regularly review your social media and application permission settings to limit data exposure.";
+                return $"Privacy Tip{nameGreeting}: Regularly review your social media and application permission settings to limit data exposure.";
             }
 
             ActivityLogger.LogAction($"Handled general query: {input}");
-            return "I'm your Cybersecurity Awareness Assistant. You can ask me about 'password safety', 'phishing', 'privacy', type 'quiz' to test your knowledge, or manage tasks ('show tasks', 'add task').";
+            return $"I'm your Cybersecurity Awareness Assistant{nameGreeting}. You can ask me about 'password safety', 'phishing', 'privacy', type 'quiz' to test your knowledge, or manage tasks ('show tasks', 'add task').";
         }
 
         private string HandleQuizInput(string input)
@@ -159,6 +195,10 @@ namespace CybersecurityChatbot
                 case 10: if (input == "b") isCorrect = true; break;
             }
 
+            string feedback = isCorrect
+                ? "Correct! Great job.\n\n"
+                : "Incorrect. Keep going!\n\n";
+
             if (isCorrect) quizScore++;
             currentQuizQuestion++;
 
@@ -169,10 +209,10 @@ namespace CybersecurityChatbot
                 int finalScore = quizScore;
                 quizScore = 0;
                 currentQuizQuestion = 0;
-                return $"Quiz finished! You scored {finalScore} out of 10. Great job improving your cybersecurity awareness!";
+                return $"{feedback}Quiz finished! You scored {finalScore} out of 10. Great job improving your cybersecurity awareness!";
             }
 
-            return GetQuestionText(currentQuizQuestion);
+            return feedback + GetQuestionText(currentQuizQuestion);
         }
 
         private string GetQuestionText(int questionNumber)
